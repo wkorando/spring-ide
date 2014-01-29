@@ -20,7 +20,8 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.wst.server.core,
  org.eclipse.jst.server.core,
  org.eclipse.jst.ws,
- org.eclipse.wst.common.modulecore
+ org.eclipse.wst.common.modulecore,
+ org.springsource.ide.eclipse.commons.gettingstarted
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-Vendor: Spring IDE Developers
