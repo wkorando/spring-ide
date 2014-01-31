@@ -32,29 +32,34 @@ public class OpenBeanClassAction extends AbstractOpenResourceAction {
 			if (obj instanceof LiveBean) {
 				LiveBean bean = (LiveBean) obj;
 				String appName = bean.getApplicationName();
-				String beanClass = bean.getBeanType();
-				if (appName != null) {
-					if (beanClass != null && beanClass.trim().length() > 0) {
-						if (beanClass.startsWith("com.sun.proxy")) {
-							// Special case for proxy beans, extract the type
-							// from the resource field
-							String resource = bean.getResource();
-							if (resource != null && resource.trim().length() > 0 && !resource.equalsIgnoreCase(null)) {
-								String resourcePath = extractResourcePath(resource);
-								if (resourcePath.endsWith(".class")) {
-									openInEditor(appName, extractClassName(resourcePath));
-								}
-							}
+				String beanType = bean.getBeanType();
+				String id = bean.getId();
+				String resource = bean.getResource();
+				openBean(id, beanType, appName, resource);
+			}
+		}
+	}
+
+	public static void openBean(String id, String beanType, String appName, String resource) {
+		if (appName != null) {
+			if (beanType != null && beanType.trim().length() > 0) {
+				if (beanType.startsWith("com.sun.proxy")) {
+					// Special case for proxy beans, extract the type
+					// from the resource field
+					if (resource != null && resource.trim().length() > 0 && !resource.equalsIgnoreCase(null)) {
+						String resourcePath = extractResourcePath(resource);
+						if (resourcePath.endsWith(".class")) {
+							openInEditor(appName, extractClassName(resourcePath));
 						}
-						else {
-							openInEditor(appName, beanClass);
-						}
-					}
-					else {
-						// No type field, so infer class from bean ID
-						openInEditor(appName, bean.getId());
 					}
 				}
+				else {
+					openInEditor(appName, beanType);
+				}
+			}
+			else {
+				// No type field, so infer class from bean ID
+				openInEditor(appName, id);
 			}
 		}
 	}

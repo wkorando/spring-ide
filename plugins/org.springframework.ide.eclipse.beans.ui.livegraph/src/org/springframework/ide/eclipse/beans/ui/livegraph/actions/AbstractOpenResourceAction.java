@@ -33,7 +33,7 @@ public abstract class AbstractOpenResourceAction extends BaseSelectionListenerAc
 		super(text);
 	}
 
-	protected String cleanClassName(String className) {
+	protected static String cleanClassName(String className) {
 		String cleanClassName = className;
 		if (className != null) {
 			int ix = className.indexOf('$');
@@ -50,7 +50,7 @@ public abstract class AbstractOpenResourceAction extends BaseSelectionListenerAc
 		return cleanClassName;
 	}
 
-	protected String extractClassName(String resourcePath) {
+	protected static String extractClassName(String resourcePath) {
 		int index = resourcePath.lastIndexOf("/WEB-INF/classes/");
 		int length = "/WEB-INF/classes/".length();
 		if (index >= 0) {
@@ -61,7 +61,7 @@ public abstract class AbstractOpenResourceAction extends BaseSelectionListenerAc
 		return resourcePath;
 	}
 
-	protected String extractResourcePath(String resourceStr) {
+	protected static String extractResourcePath(String resourceStr) {
 		// Extract the resource path out of the descriptive text
 		int indexStart = resourceStr.indexOf("[");
 		int indexEnd = resourceStr.indexOf("]");
@@ -71,7 +71,7 @@ public abstract class AbstractOpenResourceAction extends BaseSelectionListenerAc
 		return resourceStr;
 	}
 
-	protected IProject[] findProjects(String appName) {
+	protected static IProject[] findProjects(String appName) {
 		Set<IProject> projects = new HashSet<IProject>();
 		IModule[] modules = ServerUtil.getModules("jst.web");
 		for (IModule module : modules) {
@@ -97,7 +97,7 @@ public abstract class AbstractOpenResourceAction extends BaseSelectionListenerAc
 		return false;
 	}
 
-	protected void openInEditor(String appName, String className) {
+	protected static void openInEditor(String appName, String className) {
 		IProject[] projects = findProjects(appName);
 		for (IProject project : projects) {
 			IType type = JdtUtils.getJavaType(project, cleanClassName(className));

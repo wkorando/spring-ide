@@ -45,7 +45,7 @@ public class LiveBeansEditor extends JavaFxBrowser {
 		setName("Live Beans Graph");
 		URL fileURL = FileLocator.toFileURL(new URL(LIVE_BEANS_PAGE_URI));
 		htmlRoot = DashboardCopier.getCopy(new File(fileURL.toURI()), new NullProgressMonitor());
-		File welcomeHtml = new File(htmlRoot, "index.html");
+		File welcomeHtml = new File(htmlRoot, "liveBeans.html");
 		setHomeUrl(welcomeHtml.toURI().toString());
 	}
 
@@ -96,8 +96,11 @@ public class LiveBeansEditor extends JavaFxBrowser {
 		List<LiveBean> beans = graphInput.getModel().getBeans();
 		int nodeIndex = 0;
 		for (LiveBean bean : beans) {
-			nodes.add(jsonObject(jsonValue("id", nodeIndex) + ", " + jsonValue("name", bean.getDisplayName()) + ", "
-					+ jsonValue("group", 1)));
+			nodes.add(jsonObject(jsonValue("id", nodeIndex) + ", " + jsonValue("beanId", bean.getId()) + ", "
+					+ jsonValue("beanType", bean.getBeanType()) + ", "
+					+ jsonValue("applicationName", bean.getApplicationName()) + ", "
+					+ jsonValue("name", bean.getDisplayName()) + ", " + jsonValue("resource", bean.getResource())
+					+ ", " + jsonValue("group", 1)));
 			for (LiveBean dependent : bean.getDependencies()) {
 				int dependentIndex = beans.indexOf(dependent);
 				if (dependentIndex >= 0) {

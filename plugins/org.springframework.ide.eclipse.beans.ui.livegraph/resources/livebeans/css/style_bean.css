@@ -1,0 +1,66 @@
+body {
+  font: 13px "Helvetica" !important;
+}
+
+.node {
+  stroke: #999;
+    stroke-width: 2;
+  cursor: move;
+  fill: hsl(200,30%,80%);
+}
+
+.node_hovered {
+  fill: hsl(200,90%,80%);
+}
+
+.node_label_hovered {
+  stroke: red;
+   fill: red;
+}
+
+.node_label {
+   stroke-width: 0;
+   font-style: bold;
+   fill: black;
+   stroke: black;
+   font-size: 13px;
+}
+
+.link {
+  fill: none;
+  stroke: #999;
+  stroke-width: 2;
+  cursor: default;
+}
+
+.stroke {
+  fill: none;
+  stroke: #999;
+  stroke-width: 2;
+  cursor: default;
+}
+svg:not(.active):not(.ctrl) path.link {
+  cursor: pointer;
+}
+
+path.link.selected {
+  stroke-dasharray: 10,2;
+}
+
+path.link.dragline {
+  pointer-events: none;
+}
+
+path.link.hidden {
+  stroke-width: 0;
+}
+
+circle.node {
+  stroke-width: 1.5px;
+  cursor: pointer;
+}
+
+circle.node.reflexive {
+  stroke: #000 !important;
+  stroke-width: 2.5px;
+}

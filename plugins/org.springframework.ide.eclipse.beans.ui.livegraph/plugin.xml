@@ -23,4 +23,12 @@
             name="Live Beans Graph">
       </editor>
    </extension>
+   <extension
+         point="org.springsource.ide.browser.function.browserToEclipse">
+      <function
+            class="org.springframework.ide.eclipse.beans.ui.livegraph.views.OpenBeanFunction"
+            id="openBean"
+            urlExpression=".*liveBeans.html">
+      </function>
+   </extension>
 </plugin>
