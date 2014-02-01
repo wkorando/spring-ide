@@ -16,7 +16,7 @@
    <extension
          point="org.eclipse.ui.editors">
       <editor
-            class="org.springframework.ide.eclipse.beans.ui.livegraph.views.LiveBeansEditor"
+            class="org.springframework.ide.eclipse.beans.ui.livegraph.views.LiveBeansHtml5View"
             default="false"
             icon="icons/live-beans-graph.png"
             id="org.springframework.ide.eclipse.beans.ui.livegraph.editor"
@@ -28,7 +28,7 @@
       <function
             class="org.springframework.ide.eclipse.beans.ui.livegraph.views.OpenBeanFunction"
             id="openBean"
-            urlExpression=".*liveBeans.html">
+            urlExpression=".*liveBeans.*\.html">
       </function>
    </extension>
 </plugin>

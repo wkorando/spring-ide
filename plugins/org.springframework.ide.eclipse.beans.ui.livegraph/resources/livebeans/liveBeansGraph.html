@@ -33,7 +33,7 @@
 
 		// handles to link and node element groups
 		var path = svg.append('svg:g').selectAll('line'), circle = svg.append('svg:g').selectAll('g');
-		d3.json("data2.json", function(error, json) {
+		d3.json("graphData.json", function(error, json) {
 			force.nodes(json.nodes).links(json.links).start();
 
 			svg.append('svg:defs').append('svg:marker').attr('id', 'end-arrow').attr('viewBox', '0 -5 10 10').attr(
