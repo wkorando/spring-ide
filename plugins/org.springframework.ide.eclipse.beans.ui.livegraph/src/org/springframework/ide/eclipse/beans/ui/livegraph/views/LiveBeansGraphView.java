@@ -60,11 +60,11 @@ import org.springsource.ide.eclipse.commons.gettingstarted.dashboard.DashboardCo
  */
 public class LiveBeansGraphView extends JavaFxBrowserView {
 
+	private static final String LIVE_BEANS_ROOT_URI = "platform:/plugin/org.springframework.ide.eclipse.beans.ui.livegraph/resources/livebeans";
+
 	private static final String HTML_PAGE_GRAPH = "liveBeansGraph.html";
 
 	private static final String HTML_PAGE_TREE = "liveBeansTree.html";
-
-	private static final String LIVE_BEANS_ROOT_URI = "platform:/plugin/org.springframework.ide.eclipse.beans.ui.livegraph/resources/livebeans";
 
 	private static final String LINE_FEED = "\n";
 
@@ -316,7 +316,7 @@ public class LiveBeansGraphView extends JavaFxBrowserView {
 			LiveBeansGroup bean = (LiveBeansGroup) object;
 			rootChildren.add(jsonSubTree(bean));
 		}
-		String treeJson = jsonObject(jsonValue("name", "Root") + "," + jsonArray("children", rootChildren));
+		String treeJson = jsonObject(jsonArray("children", rootChildren));
 		writeDataFile("treeData.json", treeJson);
 	}
 
@@ -331,38 +331,26 @@ public class LiveBeansGraphView extends JavaFxBrowserView {
 	}
 
 	private String jsonSubTree(LiveBean bean, Set<LiveBean> parents) {
-		Set<LiveBean> children = new HashSet<LiveBean>();
+		List<String> levelChildren = new ArrayList<String>();
 		Set<LiveBean> dependencies = bean.getDependencies();
 		for (LiveBean child : dependencies) {
-			children.add(child);
+			levelChildren.add(jsonObject(jsonValue("name", "Depends on " + child.getDisplayName()) + ","
+					+ jsonValue("size", "5000")));
 		}
-		// Set<LiveBean> injectInto = bean.getInjectedInto();
-		// for (LiveBean child : injectInto) {
-		// children.add(child);
-		// }
+		Set<LiveBean> injectInto = bean.getInjectedInto();
+		for (LiveBean child : injectInto) {
+			levelChildren.add(jsonObject(jsonValue("name", "Injected into " + child.getDisplayName()) + ","
+					+ jsonValue("size", "5000")));
+		}
 
-		List<String> levelChildren = new ArrayList<String>();
-		for (LiveBean childBean : children) {
-			if (parents.contains(childBean)) {
-				continue;
-			}
-			System.err.println(childBean.getDisplayName());
-			Set<LiveBean> parentsPlus = new HashSet<LiveBean>(parents);
-			parentsPlus.add(childBean);
-			levelChildren.add(jsonSubTree(childBean, parentsPlus));
-		}
 		return jsonObject(jsonBeanValues(1, bean) + "," + jsonArray("children", levelChildren));
 	}
 
 	private String jsonBeanValues(int nodeIndex, LiveBean bean) {
-		return jsonValue("id", nodeIndex) + ", "// + jsonValue("beanId",
-												// bean.getId()) + ", "
-				// + jsonValue("beanType", bean.getBeanType()) + ", "
-				// + jsonValue("applicationName", bean.getApplicationName()) +
-				// ", "
-				+ jsonValue("name", bean.getDisplayName());
-		// + ", " + jsonValue("resource", bean.getResource()) + ", "
-		// + jsonValue("group", 1);
+		return jsonValue("beanId", bean.getId()) + ", " + jsonValue("beanType", bean.getBeanType()) + ", "
+				+ jsonValue("applicationName", bean.getApplicationName()) + ", "
+				+ jsonValue("name", bean.getDisplayName()) + ", " + jsonValue("resource", bean.getResource()) + ", "
+				+ jsonValue("group", 1) + ", " + jsonValue("item", nodeIndex);
 	}
 
 	private void writeDataFile(String fileName, String data) {
