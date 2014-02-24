@@ -30,6 +30,6 @@ public class OpenBeanFunction implements IBrowserToEclipseFunction {
 	 */
 	public void call(String argument) {
 		String[] args = StringUtils.split(argument, ";");
-		OpenBeanClassAction.openBean(args[0], args[1], args[2], args[3]);
+		new OpenBeanClassAction().openBean(args[0], args[1], args[2], args[3]);
 	}
 }

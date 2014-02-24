@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2013 Spring IDE Developers
+ * Copyright (c) 2009, 2014 Spring IDE Developers
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -31,9 +31,9 @@ public class JdtMetadataReaderFactory implements MetadataReaderFactory {
 	private final ClassLoader classloader;
 	private final CachingClassReaderFactory classReaderFactory;
 
-	public JdtMetadataReaderFactory(IJavaProject project) {
+	public JdtMetadataReaderFactory(IJavaProject project, ClassLoader classloader) {
 		this.project = project;
-		this.classloader = JdtUtils.getClassLoader(this.project.getProject(), this.getClass().getClassLoader());
+		this.classloader = classloader;
 		this.classReaderFactory = new CachingClassReaderFactory(this.classloader);
 	}
 

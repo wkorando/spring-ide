@@ -1,12 +1,12 @@
 /*******************************************************************************
- *  Copyright (c) 2012, 2013 VMware, Inc.
+ *  Copyright (c) 2012, 2014 Pivotal Software, Inc.
  *  All rights reserved. This program and the accompanying materials
  *  are made available under the terms of the Eclipse Public License v1.0
  *  which accompanies this distribution, and is available at
  *  http://www.eclipse.org/legal/epl-v10.html
  *
  *  Contributors:
- *      VMware, Inc. - initial API and implementation
+ *      Pivotal Software, Inc. - initial API and implementation
  *******************************************************************************/
 package org.springframework.ide.eclipse.metadata.process;
 
@@ -46,7 +46,6 @@ import org.springframework.ide.eclipse.beans.core.model.process.IBeansConfigRegi
 import org.springframework.ide.eclipse.core.java.JdtUtils;
 import org.springframework.ide.eclipse.core.java.classreading.CachingJdtMetadataReaderFactory;
 import org.springframework.ide.eclipse.core.java.classreading.JdtConnectedMetadata;
-import org.springframework.ide.eclipse.core.java.classreading.JdtMetadataReaderFactory;
 import org.springframework.ide.eclipse.core.model.java.JavaModelMethodSourceLocation;
 import org.springframework.ide.eclipse.core.model.java.JavaModelSourceLocation;
 import org.springframework.ide.eclipse.core.model.validation.ValidationProblem;
@@ -68,16 +67,16 @@ public class JdtConfigurationClassPostProcessor implements IBeansConfigPostProce
 		if (project == null) {
 			return;
 		}
+		
+		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 
 		ConfigurationClassPostProcessor processor = new ConfigurationClassPostProcessor();
 		DelegatingSourceExtractor sourceExtractor = new DelegatingSourceExtractor(project.getProject());
 
 		processor.setEnvironment(new ToolingAwareEnvironment());
 		processor.setSourceExtractor(sourceExtractor);
-		processor.setMetadataReaderFactory(new CachingJdtMetadataReaderFactory(project));
+		processor.setMetadataReaderFactory(new CachingJdtMetadataReaderFactory(project, classLoader));
 		processor.setProblemReporter(new JdtAnnotationMetadataProblemReporter(postProcessingContext));
-		
-		ClassLoader classLoader = JdtUtils.getClassLoader(project.getProject(), JdtMetadataReaderFactory.class.getClassLoader());
 		processor.setResourceLoader(new DefaultResourceLoader(classLoader));
 
 		ReaderEventListenerForwardingBeanDefinitionRegistry registry = new ReaderEventListenerForwardingBeanDefinitionRegistry(

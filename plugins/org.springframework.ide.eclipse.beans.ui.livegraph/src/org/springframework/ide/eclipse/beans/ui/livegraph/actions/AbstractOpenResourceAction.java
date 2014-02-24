@@ -21,6 +21,7 @@ import org.eclipse.jst.server.core.IWebModule;
 import org.eclipse.ui.actions.BaseSelectionListenerAction;
 import org.eclipse.wst.server.core.IModule;
 import org.eclipse.wst.server.core.ServerUtil;
+import org.springframework.ide.eclipse.beans.ui.livegraph.model.LiveBeansSession;
 import org.springsource.ide.eclipse.commons.core.JdtUtils;
 import org.springsource.ide.eclipse.commons.ui.SpringUIUtils;
 
@@ -33,7 +34,7 @@ public abstract class AbstractOpenResourceAction extends BaseSelectionListenerAc
 		super(text);
 	}
 
-	protected static String cleanClassName(String className) {
+	protected String cleanClassName(String className) {
 		String cleanClassName = className;
 		if (className != null) {
 			int ix = className.indexOf('$');
@@ -50,7 +51,7 @@ public abstract class AbstractOpenResourceAction extends BaseSelectionListenerAc
 		return cleanClassName;
 	}
 
-	protected static String extractClassName(String resourcePath) {
+	protected String extractClassName(String resourcePath) {
 		int index = resourcePath.lastIndexOf("/WEB-INF/classes/");
 		int length = "/WEB-INF/classes/".length();
 		if (index >= 0) {
@@ -85,9 +86,34 @@ public abstract class AbstractOpenResourceAction extends BaseSelectionListenerAc
 		}
 		return projects.toArray(new IProject[projects.size()]);
 	}
+	
+	protected IProject[] findProjects(LiveBeansSession session) {
+		Set<IProject> projects = new HashSet<IProject>();
+		
+		IProject p = session.getProject();
+		if (p!=null) {
+			projects.add(p);
+		}
+		
+		String appName = session.getApplicationName();
+		if (appName!=null && !"".equals(appName)) {
+			IModule[] modules = ServerUtil.getModules("jst.web");
+			for (IModule module : modules) {
+				Object obj = module.loadAdapter(IWebModule.class, new NullProgressMonitor());
+				if (obj instanceof IWebModule) {
+					IWebModule webModule = (IWebModule) obj;
+					if (appName.equals(webModule.getContextRoot())) {
+						projects.add(module.getProject());
+					}
+				}
+			}
+		}
+		return projects.toArray(new IProject[projects.size()]);
+	}
 
-	protected boolean hasTypeInProject(String appName, String className) {
-		IProject[] projects = findProjects(appName);
+
+	protected boolean hasTypeInProject(LiveBeansSession session, String className) {
+		IProject[] projects = findProjects(session);
 		for (IProject project : projects) {
 			IType type = JdtUtils.getJavaType(project, cleanClassName(className));
 			if (type != null) {
@@ -97,8 +123,19 @@ public abstract class AbstractOpenResourceAction extends BaseSelectionListenerAc
 		return false;
 	}
 
-	protected static void openInEditor(String appName, String className) {
+	protected void openInEditor(String appName, String className) {
 		IProject[] projects = findProjects(appName);
+		for (IProject project : projects) {
+			IType type = JdtUtils.getJavaType(project, cleanClassName(className));
+			if (type != null) {
+				SpringUIUtils.openInEditor(type);
+				break;
+			}
+		}
+	}
+	
+	protected void openInEditor(LiveBeansSession session, String className) {
+		IProject[] projects = findProjects(session);
 		for (IProject project : projects) {
 			IType type = JdtUtils.getJavaType(project, cleanClassName(className));
 			if (type != null) {

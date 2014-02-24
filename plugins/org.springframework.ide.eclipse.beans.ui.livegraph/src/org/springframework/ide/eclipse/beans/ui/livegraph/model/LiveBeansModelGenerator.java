@@ -26,6 +26,7 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -60,8 +61,16 @@ public class LiveBeansModelGenerator {
 	public static LiveBeansModel connectToModel(JMXConnector connector, LiveBeansSession session) throws CoreException {
 		try {
 			String appName = session.getApplicationName();
-			if (connector != null && appName != null && appName.length() > 0) {
-				ObjectName name = ObjectName.getInstance("", "application", "/".concat(appName));
+			if (connector != null) {
+				ObjectName name;
+				if (appName == null || appName.length() == 0) {
+					// Standalone apps like spring-boot will have an empty app
+					// name. Deal with that situation.
+					name = ObjectName.getInstance("", "application", "");
+				}
+				else {
+					name = ObjectName.getInstance("", "application", "/".concat(appName));
+				}
 				MBeanServerConnection connection = connector.getMBeanServerConnection();
 				// Test the MBean's existence before proceeding. Will throw
 				// InstanceNotFoundException
@@ -88,6 +97,7 @@ public class LiveBeansModelGenerator {
 		return null;
 	}
 
+	
 	/**
 	 * This method will attempt to create a {@link JMXConnector} from the given
 	 * parameters and will close it when it is finished. If the connection has
@@ -105,6 +115,27 @@ public class LiveBeansModelGenerator {
 	 */
 	public static LiveBeansModel connectToModel(final String serviceUrl, final String username, final String password,
 			final String appName) throws CoreException {
+		return connectToModel(serviceUrl, username, password, appName, null);
+	}
+	
+	/**
+	 * This method will attempt to create a {@link JMXConnector} from the given
+	 * parameters and will close it when it is finished. If the connection has
+	 * failed, clients may capture the thrown {@link CoreException} and inform
+	 * the user. This method is UI safe, and will not block the UI with network
+	 * operations.
+	 * 
+	 * @param serviceUrl
+	 * @param username
+	 * @param password
+	 * @param appName
+	 * @param project
+	 * @return A valid {@link LiveBeansModel} model, or <code>null</code> if
+	 * connection has failed
+	 * @throws CoreException
+	 */
+	public static LiveBeansModel connectToModel(final String serviceUrl, final String username, final String password,
+			final String appName, final IProject project) throws CoreException {
 		final CountDownLatch latch = new CountDownLatch(1);
 		final LiveBeansModel[] result = new LiveBeansModel[1];
 		final CoreException[] status = new CoreException[1];
@@ -115,7 +146,7 @@ public class LiveBeansModelGenerator {
 				JMXConnector connector = null;
 				try {
 					connector = setupConnector(serviceUrl, username, password);
-					result[0] = connectToModel(connector, new LiveBeansSession(serviceUrl, username, password, appName));
+					result[0] = connectToModel(connector, new LiveBeansSession(serviceUrl, username, password, appName, project));
 				}
 				catch (CoreException e) {
 					status[0] = e;
@@ -183,7 +214,7 @@ public class LiveBeansModelGenerator {
 		LiveBeansSession session = originalModel.getSession();
 		if (session != null) {
 			LiveBeansModel model = connectToModel(session.getServiceUrl(), session.getUsername(),
-					session.getPassword(), session.getApplicationName());
+					session.getPassword(), session.getApplicationName(), session.getProject());
 			if (model != null) {
 				return model;
 			}

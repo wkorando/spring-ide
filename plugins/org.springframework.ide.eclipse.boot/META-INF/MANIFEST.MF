@@ -26,7 +26,10 @@ Require-Bundle: org.eclipse.ui,
  org.apache.commons.collections,
  org.springsource.ide.eclipse.commons.frameworks.core,
  org.apache.commons.io,
- org.eclipse.jdt.ui
+ org.eclipse.jdt.ui,
+ org.springsource.ide.eclipse.commons.ui,
+ org.springframework.ide.eclipse.beans.ui.livegraph,
+ org.springsource.ide.eclipse.commons.browser;bundle-version="3.5.0"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
 Export-Package: org.springframework.ide.eclipse.boot.core
