@@ -24,7 +24,8 @@ public class LoadModelAction extends Action {
 	private final LiveBeansModel model;
 
 	public LoadModelAction(LiveBeansGraphView view, LiveBeansModel model) {
-		super(model.getApplicationName(), Action.AS_RADIO_BUTTON);
+		super(model.getApplicationName() == null || model.getApplicationName().isEmpty() ? model.getSession()
+				.getProject().getName() : model.getApplicationName(), Action.AS_RADIO_BUTTON);
 		this.view = view;
 		this.model = model;
 	}

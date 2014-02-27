@@ -19,9 +19,16 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Set;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.concurrent.Worker;
+import javafx.concurrent.Worker.State;
+
 import org.apache.commons.lang.StringUtils;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jface.action.Action;
@@ -33,10 +40,12 @@ import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ITreeContentProvider;
-import org.eclipse.jface.viewers.Viewer;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.actions.BaseSelectionListenerAction;
+import org.eclipse.ui.part.PageBook;
+import org.eclipse.ui.part.ViewPart;
 import org.springframework.ide.eclipse.beans.ui.livegraph.LiveGraphUiPlugin;
 import org.springframework.ide.eclipse.beans.ui.livegraph.actions.ConnectToApplicationAction;
 import org.springframework.ide.eclipse.beans.ui.livegraph.actions.FilterInnerBeansAction;
@@ -50,7 +59,9 @@ import org.springframework.ide.eclipse.beans.ui.livegraph.model.LiveBean;
 import org.springframework.ide.eclipse.beans.ui.livegraph.model.LiveBeansGroup;
 import org.springframework.ide.eclipse.beans.ui.livegraph.model.LiveBeansModel;
 import org.springframework.ide.eclipse.beans.ui.livegraph.model.LiveBeansModelCollection;
-import org.springsource.ide.eclipse.commons.browser.javafx.JavaFxBrowserView;
+import org.springframework.ide.eclipse.beans.ui.livegraph.model.LiveBeansModelGenerator;
+import org.springsource.ide.eclipse.commons.browser.javafx.JavaFxBrowserManager;
+import org.springsource.ide.eclipse.commons.browser.javafx.JavaFxBrowserViewer;
 import org.springsource.ide.eclipse.commons.gettingstarted.dashboard.DashboardCopier;
 
 /**
@@ -58,7 +69,7 @@ import org.springsource.ide.eclipse.commons.gettingstarted.dashboard.DashboardCo
  * 
  * @author Leo Dos Santos
  */
-public class LiveBeansGraphView extends JavaFxBrowserView {
+public class LiveBeansGraphView extends ViewPart {
 
 	private static final String LIVE_BEANS_ROOT_URI = "platform:/plugin/org.springframework.ide.eclipse.beans.ui.livegraph/resources/livebeans";
 
@@ -98,8 +109,6 @@ public class LiveBeansGraphView extends JavaFxBrowserView {
 
 	private FilterInnerBeansAction filterInnerBeansAction;
 
-	private final InnerBeansViewerFilter innerBeansFilter;
-
 	private LiveBeansModel activeInput;
 
 	private Action connectApplicationAction;
@@ -111,19 +120,56 @@ public class LiveBeansGraphView extends JavaFxBrowserView {
 	private int activeGroupByMode;
 
 	private ITreeContentProvider treeContentProvider;
+	
+	private PageBook pagebook;
+
+	private JavaFxBrowserViewer graphViewer;
+	private JavaFxBrowserManager graphBrowserManager = null;
+
+	private JavaFxBrowserViewer treeViewer;
+	private JavaFxBrowserManager treeBrowserManager = null;
 
 	public LiveBeansGraphView() throws URISyntaxException, IOException {
-		super("", false);
+		super();
 		prefStore = LiveGraphUiPlugin.getDefault().getPreferenceStore();
-		innerBeansFilter = new InnerBeansViewerFilter();
 	}
 
-	private void setPage(String pageName) {
+	private void createGraphViewer() {
+		graphViewer = new JavaFxBrowserViewer(pagebook, SWT.NONE);
+		graphViewer.getBrowser().getEngine().getLoadWorker().stateProperty().addListener(new ChangeListener<Worker.State>() {
+
+			public void changed(ObservableValue<? extends State> ov, State oldState, State newState) {
+				if (newState == Worker.State.SUCCEEDED && graphViewer != null) {
+					if (graphBrowserManager == null) {
+						graphBrowserManager = new JavaFxBrowserManager();
+					}
+					graphBrowserManager.setClient(graphViewer.getBrowser());
+				}
+			}
+		});
+	}
+	
+	private void createTreeViewer() {
+		treeViewer = new JavaFxBrowserViewer(pagebook, SWT.NONE);
+		treeViewer.getBrowser().getEngine().getLoadWorker().stateProperty().addListener(new ChangeListener<Worker.State>() {
+
+			public void changed(ObservableValue<? extends State> ov, State oldState, State newState) {
+				if (newState == Worker.State.SUCCEEDED && treeViewer != null) {
+					if (treeBrowserManager == null) {
+						treeBrowserManager = new JavaFxBrowserManager();
+					}
+					treeBrowserManager.setClient(treeViewer.getBrowser());
+				}
+			}
+		});
+	}
+	
+	private void setPage(JavaFxBrowserViewer viewer, String pageName) {
 		try {
 			URL fileURL = FileLocator.toFileURL(new URL(LIVE_BEANS_ROOT_URI));
 			htmlRoot = DashboardCopier.getCopy(new File(fileURL.toURI()), new NullProgressMonitor());
 			File liveBeansUrl = new File(htmlRoot, pageName);
-			setUrl(liveBeansUrl.toURI().toString());
+			viewer.setURL(liveBeansUrl.toURI().toString());
 		}
 		catch (MalformedURLException e) {
 			throw new RuntimeException(e);
@@ -138,14 +184,33 @@ public class LiveBeansGraphView extends JavaFxBrowserView {
 
 	@Override
 	public void createPartControl(Composite parent) {
-		super.createPartControl(parent);
+		pagebook = new PageBook(parent, SWT.NONE);
 		makeActions();
+		createGraphViewer();
+		createTreeViewer();
 		hookToolBar();
 		hookPullDownMenu();
 		hookContextMenu();
 		setDisplayMode(prefStore.getInt(PREF_DISPLAY_MODE));
 		setGroupByMode(prefStore.getInt(PREF_GROUP_MODE));
 		setFilterInnerBeans(prefStore.getBoolean(PREF_FILTER_INNER_BEANS));
+	}
+	
+	@Override
+	public void dispose() {
+		if (treeBrowserManager != null) {
+			treeBrowserManager.dispose();
+		}
+		if (treeViewer != null && !treeViewer.isDisposed()) {
+			treeViewer.dispose();
+		}
+		if (graphBrowserManager != null) {
+			graphBrowserManager.dispose();
+		}
+		if (graphViewer != null && !graphViewer.isDisposed()) {
+			graphViewer.dispose();
+		}
+		super.dispose();
 	}
 
 	private void fillContextMenu(IMenuManager menuManager) {
@@ -221,8 +286,8 @@ public class LiveBeansGraphView extends JavaFxBrowserView {
 		toolbar.add(new RefreshApplicationAction(this));
 	}
 
-	private boolean isViewerVisible(Viewer viewer) {
-		return viewer != null && !viewer.getControl().isDisposed() && viewer.getControl().isVisible();
+	private boolean isViewerVisible(Composite viewer) {
+		return viewer != null && !viewer.isDisposed() && viewer.isVisible();
 	}
 
 	private void makeActions() {
@@ -238,10 +303,9 @@ public class LiveBeansGraphView extends JavaFxBrowserView {
 
 	public void setDisplayMode(int mode) {
 		if (mode == DISPLAY_MODE_GRAPH) {
-			setPage(HTML_PAGE_GRAPH);
-		}
-		else if (mode == DISPLAY_MODE_TREE) {
-			setPage(HTML_PAGE_TREE);
+			pagebook.showPage(graphViewer);
+		} else if (mode == DISPLAY_MODE_TREE) {
+			pagebook.showPage(treeViewer);
 		}
 		for (ToggleViewModeAction action : displayModeActions) {
 			action.setChecked(mode == action.getDisplayMode());
@@ -252,17 +316,22 @@ public class LiveBeansGraphView extends JavaFxBrowserView {
 
 	@Override
 	public void setFocus() {
-		getBrowserViewer().setFocus();
+		if (isViewerVisible(graphViewer)) {
+			graphViewer.setFocus();
+		}
+		else if (isViewerVisible(treeViewer)) {
+			treeViewer.setFocus();
+		}
 	}
 
 	public void setGroupByMode(int mode) {
 		activeGroupByMode = mode;
-		// if (isViewerVisible(treeViewer)) {
-		// treeViewer.refresh();
-		// }
-		// for (ToggleGroupByAction action : groupByActions) {
-		// action.setChecked(mode == action.getGroupByMode());
-		// }
+		for (ToggleGroupByAction action : groupByActions) {
+			action.setChecked(mode == action.getGroupByMode());
+		}
+		if (activeInput != null) {
+			setTreeInput();
+		}
 		prefStore.setValue(PREF_GROUP_MODE, mode);
 	}
 
@@ -285,13 +354,11 @@ public class LiveBeansGraphView extends JavaFxBrowserView {
 	private static String jsonArray(String name, List<String> values) {
 		return "\"" + name + "\": [" + LINE_FEED + StringUtils.join(values, "," + LINE_FEED) + "]" + LINE_FEED;
 	}
-
-	public void setInput(LiveBeansModel model) {
-		activeInput = model;
-
+	
+	private void setGraphInput() {
 		List<String> nodes = new ArrayList<String>();
 		List<String> links = new ArrayList<String>();
-		List<LiveBean> beans = model.getBeans();
+		List<LiveBean> beans = activeInput.getBeans();
 		int nodeIndex = 0;
 		for (LiveBean bean : beans) {
 			nodes.add(jsonObject(jsonBeanValues(nodeIndex, bean)));
@@ -308,18 +375,31 @@ public class LiveBeansGraphView extends JavaFxBrowserView {
 		}
 		String jsonData = jsonObject(jsonArray("nodes", nodes) + "," + LINE_FEED + jsonArray("links", links));
 		writeDataFile("graphData.json", jsonData);
-
-		treeContentProvider = new LiveBeansTreeContentProvider(this);
+		setPage(graphViewer, HTML_PAGE_GRAPH);
+	}
+	
+	private void setTreeInput() {
+		if (treeContentProvider == null) { 
+			treeContentProvider = new LiveBeansTreeContentProvider(this);
+		}
 		List<String> rootChildren = new ArrayList<String>();
-		Object[] elements = treeContentProvider.getElements(model);
+		Object[] elements = treeContentProvider.getElements(activeInput);
 		for (Object object : elements) {
 			LiveBeansGroup bean = (LiveBeansGroup) object;
 			rootChildren.add(jsonSubTree(bean));
 		}
 		String treeJson = jsonObject(jsonArray("children", rootChildren));
-		writeDataFile("treeData.json", treeJson);
+		writeDataFile("treeData.json", treeJson);		
+		setPage(treeViewer, HTML_PAGE_TREE);
 	}
 
+	public void setInput(LiveBeansModel model) {
+		activeInput = model;
+		setGraphInput();
+		setTreeInput();
+		setDisplayMode(activeDisplayMode);
+	}
+	
 	private String jsonSubTree(LiveBeansGroup group) {
 		Object[] children = treeContentProvider.getChildren(group);
 		List<String> levelChildren = new ArrayList<String>();
@@ -347,10 +427,27 @@ public class LiveBeansGraphView extends JavaFxBrowserView {
 	}
 
 	private String jsonBeanValues(int nodeIndex, LiveBean bean) {
-		return jsonValue("beanId", bean.getId()) + ", " + jsonValue("beanType", bean.getBeanType()) + ", "
-				+ jsonValue("applicationName", bean.getApplicationName()) + ", "
-				+ jsonValue("name", bean.getDisplayName()) + ", " + jsonValue("resource", bean.getResource()) + ", "
-				+ jsonValue("group", 1) + ", " + jsonValue("item", nodeIndex);
+		StringBuilder sb = new StringBuilder();
+		sb.append(jsonValue("beanId", bean.getId()));
+		sb.append(", ");
+		sb.append(jsonValue("beanType", bean.getBeanType()));
+		sb.append(", ");
+		if (bean.getApplicationName() != null && !bean.getApplicationName().isEmpty()) {
+			sb.append(jsonValue("applicationName", bean.getApplicationName()));
+			sb.append(", ");			
+		}
+		sb.append(jsonValue("name", bean.getDisplayName()));
+		sb.append(", ");			
+		sb.append(jsonValue("resource", bean.getResource()));
+		sb.append(", ");
+		if (bean.getSession().getProject() != null && !bean.getSession().getProject().getName().isEmpty()) {
+			sb.append(jsonValue("project", bean.getSession().getProject().getName()));
+			sb.append(", ");
+		}
+		sb.append(jsonValue("group", 1));
+		sb.append(", ");
+		sb.append(jsonValue("item", nodeIndex));
+		return sb.toString();
 	}
 
 	private void writeDataFile(String fileName, String data) {
@@ -368,24 +465,24 @@ public class LiveBeansGraphView extends JavaFxBrowserView {
 	}
 
 	public void setFilterInnerBeans(boolean filtered) {
-		// if (graphViewer != null) {
-		// if (filtered) {
-		// graphViewer.addFilter(innerBeansFilter);
-		// }
-		// else {
-		// graphViewer.removeFilter(innerBeansFilter);
-		// }
-		// graphViewer.applyLayout();
-		// }
-		// if (treeViewer != null) {
-		// if (filtered) {
-		// treeViewer.addFilter(innerBeansFilter);
-		// }
-		// else {
-		// treeViewer.removeFilter(innerBeansFilter);
-		// }
-		// }
 		filterInnerBeansAction.setChecked(filtered);
 		prefStore.setValue(PREF_FILTER_INNER_BEANS, filtered);
+		if (activeInput != null) {
+			LiveBeansModel model;
+			try {
+				model = LiveBeansModelGenerator.refreshModel(activeInput);
+				if (model != null) {
+					for (ListIterator<LiveBean> itr = model.getBeans().listIterator(); itr.hasNext();) {
+						if (itr.next().isInnerBean()) {
+							itr.remove();
+						}
+					}
+					setInput(model);
+				}
+			}
+			catch (CoreException e) {
+				LiveGraphUiPlugin.getDefault().getLog().log(e.getStatus());
+			}
+		}
 	}
 }

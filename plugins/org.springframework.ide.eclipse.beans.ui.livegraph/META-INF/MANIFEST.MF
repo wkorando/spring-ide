@@ -22,7 +22,9 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.jst.ws,
  org.eclipse.wst.common.modulecore,
  org.springsource.ide.eclipse.commons.browser;bundle-version="3.5.0",
- org.springsource.ide.eclipse.commons.gettingstarted;bundle-version="3.5.0"
+ org.springsource.ide.eclipse.commons.gettingstarted;bundle-version="3.5.0",
+ org.eclipse.fx.javafx,
+ org.eclipse.fx.javafx
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-Vendor: Spring IDE Developers

@@ -11,7 +11,6 @@
 
 package org.springframework.ide.eclipse.beans.ui.livegraph.views;
 
-import org.apache.commons.lang.StringUtils;
 import org.springframework.ide.eclipse.beans.ui.livegraph.actions.OpenBeanClassAction;
 import org.springsource.ide.eclipse.commons.browser.IBrowserToEclipseFunction;
 
@@ -20,6 +19,8 @@ import org.springsource.ide.eclipse.commons.browser.IBrowserToEclipseFunction;
  * 
  */
 public class OpenBeanFunction implements IBrowserToEclipseFunction {
+	
+	private static final String UNDEFINED = "undefined";
 
 	/*
 	 * (non-Javadoc)
@@ -29,7 +30,12 @@ public class OpenBeanFunction implements IBrowserToEclipseFunction {
 	 * #call(java.lang.String)
 	 */
 	public void call(String argument) {
-		String[] args = StringUtils.split(argument, ";");
-		new OpenBeanClassAction().openBean(args[0], args[1], args[2], args[3]);
+		String[] args = argument.split(";");
+		for (int i = 0; i < args.length; i++) {
+			if (args[i].isEmpty() || UNDEFINED.equals(args[i])) {
+				args[i] = null;
+			}
+		}
+		new OpenBeanClassAction().openBean(args[0], args[1], args[2], args[3], args[4]);
 	}
 }

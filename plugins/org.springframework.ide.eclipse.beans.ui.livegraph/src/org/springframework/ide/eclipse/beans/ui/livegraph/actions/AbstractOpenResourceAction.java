@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jst.server.core.IWebModule;
@@ -123,8 +124,13 @@ public abstract class AbstractOpenResourceAction extends BaseSelectionListenerAc
 		return false;
 	}
 
-	protected void openInEditor(String appName, String className) {
-		IProject[] projects = findProjects(appName);
+	protected void openInEditor(String appName, String projectName, String className) {
+		IProject[] projects = new IProject[0];
+		if (appName == null) {
+			projects = findProjectFromName(projectName);
+		} else {
+			projects = findProjects(appName);
+		}
 		for (IProject project : projects) {
 			IType type = JdtUtils.getJavaType(project, cleanClassName(className));
 			if (type != null) {
@@ -132,6 +138,17 @@ public abstract class AbstractOpenResourceAction extends BaseSelectionListenerAc
 				break;
 			}
 		}
+	}
+	
+	private static final IProject[] findProjectFromName(String projectName) {
+		if (projectName != null) {
+			for (IProject project : ResourcesPlugin.getWorkspace().getRoot().getProjects()) {
+				if (project.getName().equals(projectName)) {
+					return new IProject[] { project };
+				}
+			}
+		}
+		return new IProject[0];
 	}
 	
 	protected void openInEditor(LiveBeansSession session, String className) {

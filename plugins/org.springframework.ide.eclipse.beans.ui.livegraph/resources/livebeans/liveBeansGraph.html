@@ -8,11 +8,21 @@
 		var dataFile = "graphData.json";
 	
 		var width = 960, height = 500, colors = d3.scale.category10();
+		
+		var padding = 20;
+		
+		var radius = 10;
+		
+		var node_stroke_width = 1.5;
+		
+		var arrow_srtoke_width = 2;
 
 		var svg = d3.select("body").append("svg").attr("width", width).attr("height", height);
 
-		var force = d3.layout.force().gravity(.3).linkDistance(100).charge(-1500).size([ width, height ]);
-
+		var force = d3.layout.force().gravity(.3).linkDistance(150).size([ width, height ]).charge(function(d) {
+			return - (3000 * d.name.length / 30);
+		});
+		
 		// mouse event vars
 		var selected_node = null, selected_link = null, mousedown_link = null, mousedown_node = null, mouseup_node = null;
 
@@ -69,49 +79,166 @@
 			});
 
 			var node = svg.selectAll(".node").data(json.nodes).enter().append("g").attr("class", "node").call(
-					force.drag);
-
-			node.append('circle').attr('class', 'node').attr('r', 5).attr('x', 10).attr('y', -15).classed('reflexive',
-					function(d) {
-						return d.reflexive;
-					}).on("mouseover", function(d) {
-				var hover_node = d3.select(this);
-				hover_node.classed("node_hovered", true);
-			}).on("mouseout", function(d) {
-				var hover_node = d3.select(this);
-				hover_node.classed("node_hovered", false);
-			}).on(
-					"dblclick",
-					function(d) {
-						var bean = json.nodes[d.item];
-						console.log("x " + bean);
-						ide.call('openBean', bean.beanId + ";" + bean.beanType + ";" + bean.applicationName + ";"
-								+ bean.resource)
+					force.drag).on("mouseover", function(d) {
+						var circle = d3.select(this.childNodes.item(0));
+						var label = d3.select(this.childNodes.item(1));
+						circle.classed("node_hovered", true);
+						label.classed("node_label", false);
+					}).on("mouseout", function(d) {
+						var circle = d3.select(this.childNodes.item(0));
+						var label = d3.select(this.childNodes.item(1));
+						circle.classed("node_hovered", false);
+						label.classed("node_label", true);
+					}).on("dblclick", function(d) {
+						ide.call('openBean', d.beanId + ";" + d.beanType + ";" + d.applicationName + ";" + d.resource + ";" + d.project + ";");
 					});
 
-			node.append("text").attr("dx", 20).attr("dy", 3).attr("class", "node_label").text(function(d) {
+			node.append('circle').attr('class', 'node').attr('r', radius).attr('x', 10).attr('y', -15).classed('reflexive',
+					function(d) {
+						return d.reflexive;
+					});
+
+			node.append("text").attr("dx", 20).attr("dy", 3).attr("class", "node_label_hovered node_label").text(function(d) {
 				return d.name
 			});
+			
+			force.drag().on("dragstart", function(d) {
+				force.stop();
+			});
+			force.drag().on("dragend", function(d) {
+				adjustViewport();
+			});
+			
+			var threshold = 1;
+			force.on("tick", function(e) {
+				
+				var maxDeviation = 0;
+				var cache = {};
 
-			force.on("tick", function() {
+// 				var k = 100 * e.alpha;
+// 				node.each(function(o, i) {
+// 				    o.y += i & 1 ? k : -k;
+// 				    o.x += i & 2 ? k : -k;
+// 				  });
+				  
 				link.attr("d", function(d) {
-					return "M" + d.source.x + "," + d.source.y + "S" + d.source.x + "," + d.target.y + " " + d.target.x
-							+ "," + d.target.y;
+					var stroke_adjustment = node_stroke_width / 2;
+					var source = calculateCircleAnchorPoint(
+							{x: 0, y: 0},
+							{x: radius + stroke_adjustment, y: radius + stroke_adjustment},
+							{x: d.target.x - d.source.x - radius, y: d.target.y - d.source.y - radius});
+					source.x += d.source.x;
+					source.y += d.source.y;
+					var target = calculateCircleAnchorPoint(
+							{x: 0, y: 0},
+							{x: radius + stroke_adjustment + arrow_srtoke_width, y: radius + stroke_adjustment + arrow_srtoke_width},
+							{x: d.source.x - d.target.x - radius, y: d.source.y - d.target.y - radius});
+					target.x += d.target.x;
+					target.y += d.target.y;
+					d.source[d.target.beanId] = source;
+					d.target[d.source.beanId] = target;
+					return "M" + source.x + "," + source.y + "S" + source.x + "," + target.y + " " + target.x
+							+ "," + target.y;
 				});
 				link.attr("x1", function(d) {
-					return d.source.x;
+					return d.source[d.target.beanId].x;
 				}).attr("y1", function(d) {
-					return d.source.y;
+					return d.source[d.target.beanId].y;
 				}).attr("x2", function(d) {
-					return d.target.x;
+					return d.target[d.source.beanId].x;
 				}).attr("y2", function(d) {
-					return d.target.y;
+					return d.target[d.source.beanId].y;
 				});
 
 				node.attr("transform", function(d) {
+					if (this.transform.baseVal.length) {
+						var translate = this.transform.baseVal.getItem(0);
+						maxDeviation = Math.max(maxDeviation, Math.max(Math.abs(translate.matrix.e - d.x), Math.abs(translate.matrix.f - d.y)));						
+					} else {
+						maxDeviation = threshold;
+					}
 					return "translate(" + d.x + "," + d.y + ")";
 				});
+				
+ 				adjustViewport();
+				
+				console.log("Deviation: " + maxDeviation);
+				if (maxDeviation < threshold) {
+					force.stop();
+				}
+				
 			});
-
+			
+			force.on("end", function() {
+				d3.selectAll(".node").classed("fixed", function(d) { d.fixed = true });
+				adjustViewport();
+			});
+			
+			var adjustViewport = function() {
+				var rect = {
+					left: Number.MAX_VALUE,
+					top: Number.MAX_VALUE,
+					right: Number.MIN_VALUE,
+					bottom: Number.MIN_VALUE
+				};
+				
+				d3.selectAll(".node").each(function(d, i) {
+					if (!this.transform.baseVal.numberOfItems) {
+						return;
+					}
+					var translate = this.transform.baseVal.getItem(0);
+					var box = this.getBBox();
+					var left = translate.matrix.e;
+					var top = translate.matrix.f;
+					var right = left + box.width;
+					var bottom = top + box.height;
+					rect.left = Math.min(rect.left, left);
+					rect.top = Math.min(rect.top, top);
+					rect.right = Math.max(rect.right, right);
+					rect.bottom = Math.max(rect.bottom, bottom);			
+				});
+				rect.width = rect.right - rect.left;
+				rect.height = rect.bottom - rect.top;
+				if (rect.width > 0 && rect.height > 0) {
+	 				svg.attr("viewBox", (rect.left - padding) + ", " + (rect.top - padding) +", " + (rect.width + 2*padding) + ", " + (rect.height + 2*padding));
+	  				svg.attr("width", rect.width + 2*padding).attr("height", rect.height + 2*padding);
+				}
+			};
+			
+			var calculateCircleAnchorPoint = function(c, r, ref) {
+				var la = ref.y - c.y;
+				var lb = c.x - ref.x;
+				var lc = c.y * (ref.x - c.x) - c.x * (ref.y - c.y);
+				
+				var h = c.x;
+				var k = c.y;
+				var f1 = r.x;
+				var f2 = r.y;
+				
+				var x = c.x, y = c.y;
+				if (lb === 0) {
+					x = -lc / la;
+					var sqrt = Math.sqrt(f1*f1 * f2*f2 - (x - h)*(x - h) * f2*f2);
+					var y1 = sqrt / f2 + k;
+					var y2 = -sqrt / f2 + k;
+					y = Math.abs(ref.y - y1) > Math.abs(ref.y - y2) ? y2 : y1;
+				} else {					
+					var a = lb * lb * f2 * f2 + la * la * f1 * f1;
+					var b = -2 * h * lb * lb * f2 * f2 + f1 * f1 * (lc + k * lb);
+					var c = h * h *lb * lb * f2 * f2 + f1 * f1 * (lc + k * lb) - lb * lb * f1 * f1 * f2 * f2;
+					
+					// There must be 2 solutions for the equation, hence detrminant is larger than 0.
+					var sqrt = Math.sqrt(b * b - 4 * a * c);
+					var x1 = (-b + sqrt) / (2 * a);
+					var x2 = (-b - sqrt) / (2 * a);
+					
+					var x = Math.abs(ref.x - x1) > Math.abs(ref.x - x2) ? x2 : x1;
+					var y = (-lc - la * x) / lb;
+				}
+				
+				return { x: x, y: y};				
+			}
+			
+			
 		});
 	</script>

@@ -5,6 +5,17 @@
 <link type="text/css" rel="stylesheet" href="css/treestyle.css" />
 <script src="http://d3js.org/d3.v3.js"></script>
 <style type="text/css">
+
+body {
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	font: 12px "Helvetica" !important;
+}
+
 .node circle {
 	cursor: pointer;
 	fill: #fff;
@@ -12,13 +23,32 @@
 	stroke-width: 1.5px;
 }
 
-.node text {
-	font-size: 11px;
+.node .circle_hovered {
+	stroke: royalblue;
+	stroke-width: 3px;
+}
+
+.node .text_hovered {
+	font-weight: bold;
+}
+
+.node .text_active_hovered {
+	text-decoration: underline;
+}
+
+.node .text{
+	cursor: default;
+	fill: #555;
+}
+
+.node .text_active {
+	cursor: pointer;
+	fill: black;
 }
 
 path.link {
 	fill: none;
-	stroke: #ccc;
+	stroke: #ddd;
 	stroke-width: 1.5px;
 }
 </style>
@@ -28,20 +58,85 @@ path.link {
 	<script type="text/javascript">
 		var dataFile = "treeData.json";
 
-		var m = [ 20, 120, 20, 120 ], w = 1280 - m[1] - m[3], h = 800 - m[0] - m[2], i = 0, root;
+		var i = 0, root;
 
-		var tree = d3.layout.tree().size([ h, w ]);
-
+		var tree = d3.layout.tree();
+		
+		var rowHeight = 12 * 2;
+		
+		var padding = 20;
+		
+		var totalHeight = rowHeight;
+		
+		var timer = null;
+		
+		var DEFAULT_DEPTH = 100;
+		
+		var DEPTH_PADDING = 40;
+		
+		var depthMap = {};
+		depthMap[0] = 0;
+		
 		var diagonal = d3.svg.diagonal().projection(function(d) {
-			return [ d.y, d.x ];
+			return [ d.y, totalHeight * d.x ];
 		});
+		
+		var adjustViewport = function() {
+			var rect = {
+				left: Number.MAX_VALUE,
+				top: Number.MAX_VALUE,
+				right: Number.MIN_VALUE,
+				bottom: Number.MIN_VALUE
+			};
+			
+			vis.selectAll(".node").each(function(d, i) {
+				if (!this.transform.baseVal.numberOfItems
+						|| !d.parent) {
+					return;
+				}
+				var translate = this.transform.baseVal.getItem(0);
+				var box = this.getBBox();
+				var left = translate.matrix.e;
+				var top = translate.matrix.f;
+				var right = left + box.width;
+				var bottom = top + box.height;
+				rect.left = Math.min(rect.left, left);
+				rect.top = Math.min(rect.top, top);
+				rect.right = Math.max(rect.right, right);
+				rect.bottom = Math.max(rect.bottom, bottom);			
+			});
+			rect.width = rect.right - rect.left;
+			rect.height = rect.bottom - rect.top;
+			if (rect.width > 0 && rect.height > 0) {
+				var svg = d3.select("svg");
+				svg.attr("viewBox", (rect.left - padding) + ", " + (rect.top - padding) +", " + (rect.width + 2*padding) + ", " + (rect.height + 2*padding));
+				svg.attr("width", rect.width + 2*padding).attr("height", rect.height + 2*padding);
+			}
+		};
+		
+		var isActiveNode = function(d) {
+			return d.beanType && (d.applicationName || d.project) && d.beanId && d.resource;
+		};
+		
+		var resetViewportUpdate = function(time, reccur) {
+			if (timer) {
+				clearTimeout(timer);
+			}
+			if (reccur) {
+				timer = setTimeout(function() {
+					adjustViewport();
+					resetViewportUpdate(time, reccur);
+				}, time);
+			} else {
+				timer = setTimeout(adjustViewport, time);
+			}
+		}
 
-		var vis = d3.select("#body").append("svg:svg").attr("width", w + m[1] + m[3]).attr("height", h + m[0] + m[2])
-				.append("svg:g").attr("transform", "translate(" + m[3] + "," + m[0] + ")");
+		var vis = d3.select("#body").append("svg:svg");
 
 		d3.json(dataFile, function(json) {
 			root = json;
-			root.x0 = h / 2;
+			root.x0 = 0;
 			root.y0 = 0;
 
 			function toggleAll(d) {
@@ -50,23 +145,33 @@ path.link {
 					toggle(d);
 				}
 			}
-
+			
 			// Initialize the display to show a few nodes.
 			root.children.forEach(toggleAll);
 
 			update(root);
 		});
-
+		
+		function calculateNumberOfLeafs(source) {
+			if (source.children && source.children.length) {
+				var number = 0;
+				source.children.forEach(function(child) {
+					number += calculateNumberOfLeafs(child);
+				});
+				return number;
+			} else {
+				return 1;
+			}
+		}
+		
 		function update(source) {
 			var duration = d3.event && d3.event.altKey ? 5000 : 500;
 
 			// Compute the new tree layout.
 			var nodes = tree.nodes(root).reverse();
+			
 
-			// Normalize for fixed-depth.
-			nodes.forEach(function(d) {
-				d.y = d.depth * 180;
-			});
+			totalHeight = calculateNumberOfLeafs(root) * rowHeight;
 
 			// Update the nodes…
 			var node = vis.selectAll("g.node").data(nodes, function(d) {
@@ -75,34 +180,64 @@ path.link {
 
 			// Enter any new nodes at the parent's previous position.
 			var nodeEnter = node.enter().append("svg:g").attr("class", "node").attr("transform", function(d) {
-				return "translate(" + source.y0 + "," + source.x0 + ")";
-			}).on("click", function(d) {
-				toggle(d);
-				update(d);
-			}).on(
-					"dblclick",
-					function(d) {
-						var bean = json.nodes[d.item];
-						console.log("x " + bean);
-						ide.call('openBean', bean.beanId + ";" + bean.beanType + ";" + bean.applicationName + ";"
-								+ bean.resource)
-					});
+				return "translate(" + source.y0 + "," + source.x0 * totalHeight + ")";
+			}).on("dblclick", function(d) {
+				ide.call('openBean', d.beanId + ";" + d.beanType + ";" + d.applicationName + ";" + d.resource + ";" + d.project + ";");
+			}).on("mouseover", function(d) {
+				var circle = d3.select(this.childNodes.item(0));
+				var label = d3.select(this.childNodes.item(1));
+				circle.classed("circle_hovered", true);
+				label.classed("text_hovered", true);
+				if (isActiveNode(d)) {
+					label.classed("text_active_hovered", true);
+				}
+			}).on("mouseout", function(d) {
+				var circle = d3.select(this.childNodes.item(0));
+				var label = d3.select(this.childNodes.item(1));
+				circle.classed("circle_hovered", false);
+				label.classed("text_hovered text_active_hovered", false);
+			});
 
 			nodeEnter.append("svg:circle").attr("r", 1e-6).style("fill", function(d) {
 				return d._children ? "lightsteelblue" : "#fff";
 			});
 
-			nodeEnter.append("svg:text").attr("x", function(d) {
-				return d.children || d._children ? -10 : 10;
+			var text = nodeEnter.append("svg:text").attr("x", function(d) {
+				return 10;
 			}).attr("dy", ".35em").attr("text-anchor", function(d) {
-				return d.children || d._children ? "end" : "start";
+				return "start";
 			}).text(function(d) {
 				return d.name;
-			}).style("fill-opacity", 1e-6);
+			}).style("fill-opacity", 1e-6).classed("text_active", function(d, i) {
+				return isActiveNode(d);
+			}).classed("text", true);
+			
+			text.each(function(d, i) {
+				var box = this.getBBox();
+				var current = depthMap[d.depth] ? depthMap[d.depth] : DEFAULT_DEPTH;
+				depthMap[d.depth] = Math.max(current, box.width + DEPTH_PADDING);
+			});
+			
+			// Normalize for fixed-depth.
+			nodes.forEach(function(d) {
+				d.y = 0;
+				for (var depth = 0; depth < d.depth; depth++) {
+					if (depthMap[depth]) {
+						d.y += depthMap[depth];
+					}
+				}
+			});
+
 
 			// Transition nodes to their new position.
 			var nodeUpdate = node.transition().duration(duration).attr("transform", function(d) {
-				return "translate(" + d.y + "," + d.x + ")";
+				return "translate(" + d.y + "," + totalHeight * d.x + ")";
+			}).style("visibility", function(d) {
+				return d.parent ? "visible" : " hidden";
+			}).each("start", function() {
+				resetViewportUpdate(50, true);
+			}).each("end", function() {
+				resetViewportUpdate(50);				
 			});
 
 			nodeUpdate.select("circle").attr("r", 4.5).style("fill", function(d) {
@@ -113,12 +248,17 @@ path.link {
 
 			// Transition exiting nodes to the parent's new position.
 			var nodeExit = node.exit().transition().duration(duration).attr("transform", function(d) {
-				return "translate(" + source.y + "," + source.x + ")";
+				return "translate(" + source.y + "," + source.x * totalHeight + ")";
 			}).remove();
 
 			nodeExit.select("circle").attr("r", 1e-6);
 
 			nodeExit.select("text").style("fill-opacity", 1e-6);
+			
+			vis.selectAll("circle").on("click", function(d) {
+				toggle(d);
+				update(d);
+			});
 
 			// Update the links…
 			var link = vis.selectAll("path.link").data(tree.links(nodes), function(d) {
@@ -138,7 +278,9 @@ path.link {
 			}).transition().duration(duration).attr("d", diagonal);
 
 			// Transition links to their new position.
-			link.transition().duration(duration).attr("d", diagonal);
+			link.transition().duration(duration).attr("d", diagonal).style("visibility", function(d) {
+				return d.source.parent ? "visible" : " hidden";
+			});
 
 			// Transition exiting nodes to the parent's new position.
 			link.exit().transition().duration(duration).attr("d", function(d) {
@@ -157,6 +299,7 @@ path.link {
 				d.x0 = d.x;
 				d.y0 = d.y;
 			});
+						
 		}
 
 		// Toggle children.

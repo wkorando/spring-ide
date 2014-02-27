@@ -3,27 +3,29 @@ body {
 }
 
 .node {
-  stroke: #999;
-    stroke-width: 2;
+  stroke: #444;
+  stroke-width: 1.5;
   cursor: move;
   fill: hsl(200,30%,80%);
 }
 
 .node_hovered {
   fill: hsl(200,90%,80%);
+  stroke: black;
+  stroke-width: 3;
 }
 
 .node_label_hovered {
-  stroke: red;
-   fill: red;
-}
-
-.node_label {
    stroke-width: 0;
-   font-style: bold;
+   font-weight: bold;
    fill: black;
    stroke: black;
    font-size: 13px;
+}
+
+.node_label {
+   font-weight: normal;
+   fill: #444;
 }
 
 .link {
@@ -35,7 +37,7 @@ body {
 
 .stroke {
   fill: none;
-  stroke: #999;
+  stroke: #444;
   stroke-width: 2;
   cursor: default;
 }
@@ -55,10 +57,10 @@ path.link.hidden {
   stroke-width: 0;
 }
 
-circle.node {
-  stroke-width: 1.5px;
-  cursor: pointer;
-}
+/* circle.node { */
+/*   stroke-width: 1.5px; */
+/*   cursor: pointer; */
+/* } */
 
 circle.node.reflexive {
   stroke: #000 !important;
