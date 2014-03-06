@@ -26,7 +26,7 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.fx.javafx,
  org.eclipse.fx.javafx
 Bundle-ActivationPolicy: lazy
-Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-Vendor: Spring IDE Developers
 Bundle-ClassPath: .
 Export-Package: org.springframework.ide.eclipse.beans.ui.livegraph,
