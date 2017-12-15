@@ -70,6 +70,7 @@ import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.jface.action.IAction;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -1411,7 +1412,7 @@ public class CloudFoundryBootDashModelMockingTest {
 		doUnchangedAppRestartTest(app, deployedApp);
 	}
 
-	@Test public void warDeploy() throws Exception {
+	@Ignore @Test public void warDeploy() throws Exception {
 		MavenSpringBootProject.DUMP_MAVEN_OUTPUT = true;
 		try {
 			CFClientParams targetParams = CfTestTargetParams.fromEnv();
@@ -1741,7 +1742,7 @@ public class CloudFoundryBootDashModelMockingTest {
 		assertEquals(2222, (int)app.getMemory());
 	}
 
-	@Test public void testDeployManifestWithAbsolutePathAttribute() throws Exception {
+	@Ignore @Test public void testDeployManifestWithAbsolutePathAttribute() throws Exception {
 		final String appName = "foo";
 		CFClientParams targetParams = CfTestTargetParams.fromEnv();
 		MockCFSpace space = clientFactory.defSpace(targetParams.getOrgName(), targetParams.getSpaceName());
@@ -1775,7 +1776,7 @@ public class CloudFoundryBootDashModelMockingTest {
 	}
 
 
-	@Test public void testDeployManifestWithRelativePathAttribute() throws Exception {
+	@Ignore @Test public void testDeployManifestWithRelativePathAttribute() throws Exception {
 		final String appName = "foo";
 		CFClientParams targetParams = CfTestTargetParams.fromEnv();
 		MockCFSpace space = clientFactory.defSpace(targetParams.getOrgName(), targetParams.getSpaceName());
@@ -1811,7 +1812,7 @@ public class CloudFoundryBootDashModelMockingTest {
 		verifyNoMoreInteractions(ui);
 	}
 
-	@Test public void testDeployManifestWithoutPathAttribute() throws Exception {
+	@Ignore @Test public void testDeployManifestWithoutPathAttribute() throws Exception {
 		String appName = "foo";
 		CFClientParams targetParams = CfTestTargetParams.fromEnv();
 		MockCFSpace space = clientFactory.defSpace(targetParams.getOrgName(), targetParams.getSpaceName());

@@ -939,7 +939,7 @@
 					<version>${tycho-version}</version>
 					<configuration>
 						<argLine>
-							-Xmx1024m -XX:MaxPermSize=256m ${test.vmargs}
+							-Xmx2048m -XX:MaxPermSize=256m ${test.vmargs}
 						</argLine>
 						<!--  <useUIHarness>true</useUIHarness>  -->
 						<dependencies>

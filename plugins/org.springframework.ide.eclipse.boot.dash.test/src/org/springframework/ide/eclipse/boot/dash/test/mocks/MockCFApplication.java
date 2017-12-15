@@ -130,7 +130,7 @@ public class MockCFApplication {
 			public boolean test() throws Exception {
 //				System.out.println("Checking token: "+cancelToken);
 				if (!cancelationToken.isCanceled() && System.currentTimeMillis()<endTime) {
-//					System.out.println("Starting "+getName()+"...");
+					System.out.println("Starting "+getName()+"...");
 					throw new IOException("App still starting");
 				}
 				return true;

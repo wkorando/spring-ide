@@ -429,6 +429,8 @@ public class MockCloudFoundryClientFactory extends CloudFoundryClientFactory {
 			app.setBuildpackUrlMaybe(args.getBuildpack());
 			app.setRoutes(buildRoutes(args));
 
+			System.out.println("Pushing (routes and buildpack done) " + args.getAppName());
+
 			app.setCommandMaybe(args.getCommand());
 			app.setDiskQuotaMaybe(args.getDiskQuota());
 			app.setEnvMaybe(args.getEnv());
@@ -438,9 +440,21 @@ public class MockCloudFoundryClientFactory extends CloudFoundryClientFactory {
 			app.setTimeoutMaybe(args.getTimeout());
 			app.setHealthCheckTypeMaybe(args.getHealthCheckType());
 			app.setHealthCheckHttpEndpoint(args.getHealthCheckHttpEndpoint());
-			app.setBits(IOUtil.toBytes(new FileInputStream(args.getApplicationDataAsFile())));
+
+			System.out.println("Pushing: (app data file load)" + args.getAppName() + " file: " + args.getApplicationDataAsFile());
+//			FileInputStream stream = new FileInputStream(args.getApplicationDataAsFile());
+			app.setBits(/*IOUtil.toBytes(stream)*/new byte[] { 1 });
+//			stream.close();
+
+			System.out.println("Pushing: (put into space)" + args.getAppName());
+
 			space.put(app);
+
+			System.out.println("Pushing: (increment count)" + args.getAppName());
+
 			space.getPushCount(app.getName()).increment();
+
+			System.out.println("Starting (push) " + args.getAppName());
 
 			app.start(cancelationToken);
 		}
